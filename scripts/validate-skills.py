@@ -6,10 +6,15 @@ standard in ``docs/SKILL-FORMAT.md``:
 
 * valid YAML frontmatter delimited by ``---`` lines;
 * ``name`` present, <=64 chars, lowercase ``a-z``/``0-9``/hyphens, no leading or
-  trailing hyphen, and equal to the containing folder name;
+  trailing hyphen, equal to the containing folder name, and unique repo-wide;
 * ``description`` present, non-empty, <=1024 chars;
+* portable frontmatter (no reserved names, XML tags, or agent-specific keys);
+* optional ``compatibility`` is non-empty and <=500 chars;
 * the file is shorter than 500 lines;
 * every internal ``references/`` link in the body resolves to a real file.
+
+It also warns when ``description`` exceeds the 200-character claude.ai soft
+limit or the experimental ``allowed-tools`` field is present.
 
 Exits 0 when everything passes, 1 when any skill fails. No third-party deps.
 
@@ -26,7 +31,30 @@ from pathlib import Path
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_NAME = 64
 MAX_DESCRIPTION = 1024
+SOFT_MAX_DESCRIPTION = 200
+MAX_COMPATIBILITY = 500
 MAX_LINES = 500
+
+RESERVED_NAME_WORDS = ("anthropic", "claude")
+FORBIDDEN_KEYS = frozenset(
+    {
+        "when_to_use",
+        "argument-hint",
+        "disable-model-invocation",
+        "user-invocable",
+        "model",
+        "paths",
+        "hooks",
+        "shell",
+        "context",
+        "globs",
+        "alwaysApply",
+        "trigger",
+    }
+)
+# A negative lookbehind avoids treating attached generic syntax such as
+# ``GetNode<T>`` as an XML tag while still rejecting standalone tags.
+XML_TAG_RE = re.compile(r"(?<![\w.])</?[A-Za-z][A-Za-z0-9.-]*(?:\s[^<>]*)?/?>")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -105,8 +133,9 @@ def split_frontmatter(text: str) -> tuple[dict, int] | tuple[None, int]:
     return fm, end + 1
 
 
-def validate_file(path: Path) -> list[str]:
+def validate_file(path: Path) -> tuple[list[str], list[str]]:
     errors: list[str] = []
+    warnings: list[str] = []
     rel = path.relative_to(REPO_ROOT).as_posix()
     text = path.read_text(encoding="utf-8")
 
@@ -118,7 +147,12 @@ def validate_file(path: Path) -> list[str]:
     fm, _ = split_frontmatter(text)
     if fm is None:
         errors.append("missing or malformed YAML frontmatter (need opening and closing '---')")
-        return [f"{rel}: {e}" for e in errors]
+        return [f"{rel}: {e}" for e in errors], []
+
+    for key in sorted(FORBIDDEN_KEYS.intersection(fm)):
+        errors.append(f"forbidden frontmatter key: {key!r}")
+    if "allowed-tools" in fm:
+        warnings.append("experimental frontmatter key 'allowed-tools' reduces portability")
 
     # name
     name = fm.get("name", "")
@@ -132,6 +166,10 @@ def validate_file(path: Path) -> list[str]:
             errors.append(
                 f"'name' = {name!r} must be lowercase a-z/0-9/hyphens with no leading/trailing hyphen"
             )
+        if any(word in name for word in RESERVED_NAME_WORDS):
+            errors.append(f"'name' = {name!r} contains a reserved word")
+        if XML_TAG_RE.search(name):
+            errors.append(f"'name' = {name!r} must not contain XML tags")
         # router/SKILL.md lives in 'router'; skills live in their own folder
         if name != folder:
             errors.append(f"'name' = {name!r} must equal folder name {folder!r}")
@@ -142,6 +180,23 @@ def validate_file(path: Path) -> list[str]:
         errors.append("frontmatter 'description' is missing or empty")
     elif len(desc) > MAX_DESCRIPTION:
         errors.append(f"'description' is {len(desc)} chars (max {MAX_DESCRIPTION})")
+    else:
+        if len(desc) > SOFT_MAX_DESCRIPTION:
+            warnings.append(
+                f"'description' is {len(desc)} chars (soft target {SOFT_MAX_DESCRIPTION})"
+            )
+        if XML_TAG_RE.search(desc):
+            errors.append("'description' must not contain XML tags")
+
+    # optional compatibility
+    if "compatibility" in fm:
+        compatibility = fm["compatibility"]
+        if not compatibility:
+            errors.append("frontmatter 'compatibility' must not be empty when present")
+        elif len(compatibility) > MAX_COMPATIBILITY:
+            errors.append(
+                f"'compatibility' is {len(compatibility)} chars (max {MAX_COMPATIBILITY})"
+            )
 
     # internal references/ links resolve
     targets = set(MD_LINK_RE.findall(text)) | set(CODE_PATH_RE.findall(text))
@@ -159,7 +214,28 @@ def validate_file(path: Path) -> list[str]:
         if not resolved.exists():
             errors.append(f"reference link does not resolve: {target!r}")
 
-    return [f"{rel}: {e}" for e in errors]
+    return (
+        [f"{rel}: {e}" for e in errors],
+        [f"{rel}: {warning}" for warning in warnings],
+    )
+
+
+def validate_unique_names(files: list[Path]) -> list[str]:
+    """Return errors for names used by more than one skill directory."""
+    paths_by_name: dict[str, list[Path]] = {}
+    for path in files:
+        fm, _ = split_frontmatter(path.read_text(encoding="utf-8"))
+        if fm is None or not fm.get("name"):
+            continue
+        paths_by_name.setdefault(fm["name"], []).append(path)
+
+    errors: list[str] = []
+    for name, paths in sorted(paths_by_name.items()):
+        if len(paths) < 2:
+            continue
+        locations = ", ".join(path.relative_to(REPO_ROOT).as_posix() for path in paths)
+        errors.append(f"duplicate skill name {name!r}: {locations}")
+    return errors
 
 
 def main() -> int:
@@ -169,10 +245,18 @@ def main() -> int:
         return 0
 
     all_errors: list[str] = []
+    all_warnings: list[str] = []
     for path in files:
-        all_errors.extend(validate_file(path))
+        errors, warnings = validate_file(path)
+        all_errors.extend(errors)
+        all_warnings.extend(warnings)
+    all_errors.extend(validate_unique_names(files))
 
     print(f"Validated {len(files)} skill file(s).")
+    if all_warnings:
+        print(f"\nWARNINGS — {len(all_warnings)} portability warning(s):")
+        for warning in all_warnings:
+            print(f"  - {warning}")
     if all_errors:
         print(f"\nFAILED — {len(all_errors)} problem(s):")
         for e in all_errors:
