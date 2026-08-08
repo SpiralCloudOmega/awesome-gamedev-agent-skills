@@ -63,6 +63,16 @@ If you change the validator itself, run its regression tests too:
 python -m unittest discover -s tests -v
 ```
 
+The documentation site is generated from the same frontmatter, so a skill's page
+appears as soon as its `SKILL.md` is committed. To preview it locally:
+
+```bash
+python scripts/generate-site.py     # writes _site/ (git-ignored)
+python scripts/check-site.py        # per-page title/description/canonical checks
+```
+
+CI runs the validator, the tests and both site steps on every pull request.
+
 ## Updating the router when you add a skill
 
 The [master router](router/SKILL.md) only routes to skills it knows about, so a new skill is

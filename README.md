@@ -66,6 +66,11 @@ claude plugin install godot@awesome-gamedev-agent-skills    # or: unity · unrea
 Prefer to copy the files by hand, or want the exact per-tool paths? See
 **[`docs/INSTALLATION.md`](docs/INSTALLATION.md)**.
 
+Want to read the catalog as web pages instead? Every skill, engine group, and per-agent install
+path is browsable at
+**[gamedev-skills.github.io/awesome-gamedev-agent-skills](https://gamedev-skills.github.io/awesome-gamedev-agent-skills/)**,
+generated straight from the `SKILL.md` files in this repo.
+
 Then just talk to your agent — see below.
 
 ## What you can ask
@@ -296,7 +301,8 @@ skills/        66 specialized skills, grouped by engine / discipline / genre / w
 router/        the master router skill (+ references/)
 docs/          authoring standard, installation, compatibility
 templates/     SKILL.md template
-scripts/       validate-skills.py and tooling
+scripts/       validate-skills.py, generate-site.py and tooling
+tests/         regression tests for the validator
 ```
 
 ## Contributing

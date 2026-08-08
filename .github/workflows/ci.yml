@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skills and run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate SKILL.md frontmatter and links
+        run: python scripts/validate-skills.py
+
+      - name: Run validator regression tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build the documentation site
+        run: python scripts/generate-site.py
+
+      - name: Check generated pages
+        run: python scripts/check-site.py

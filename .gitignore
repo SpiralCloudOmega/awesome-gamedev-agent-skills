@@ -16,6 +16,7 @@ desktop.ini
 
 # Tooling / scratch
 __pycache__/
+_site/
 node_modules/
 dist/
 .cache/
