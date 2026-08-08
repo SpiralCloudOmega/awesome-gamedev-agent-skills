@@ -57,6 +57,12 @@ python scripts/validate-skills.py
 
 It exits non-zero and prints a report if anything fails.
 
+If you change the validator itself, run its regression tests too:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ## Updating the router when you add a skill
 
 The [master router](router/SKILL.md) only routes to skills it knows about, so a new skill is
