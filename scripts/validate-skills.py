@@ -26,6 +26,30 @@ ALLOWED_FRONTMATTER = frozenset({"name", "description"})
 ALLOWED_SKILL_ENTRIES = frozenset({"SKILL.md", "agents", "assets", "references", "scripts"})
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# Directories the repository-wide Markdown walk must never enter: version-control
+# internals, vendored packages, build output, and the paths .gitignore keeps local.
+# Without this the link check reports failures for third-party README files that
+# are not part of the project, and only passes on a clean checkout.
+EXCLUDED_DIRS = frozenset(
+    {
+        ".git",
+        ".kiro",
+        ".cache",
+        ".tmp",
+        ".venv",
+        "venv",
+        "__pycache__",
+        "_site",
+        "node_modules",
+        "site-packages",
+        "dist",
+        "build",
+        "scratch",
+        "plan",
+        "progress",
+    }
+)
+
 
 def find_skill_files() -> list[Path]:
     files = sorted((REPO_ROOT / "skills").rglob("SKILL.md"))
@@ -215,7 +239,7 @@ def validate_markdown_links() -> list[str]:
     """Check repository-local Markdown and HTML image targets outside code fences."""
     errors: list[str] = []
     for path in sorted(REPO_ROOT.rglob("*.md")):
-        if ".git" in path.parts:
+        if any(part in EXCLUDED_DIRS for part in path.parts):
             continue
         text = _without_fenced_code(path.read_text(encoding="utf-8"))
         text = re.sub(r"`[^`]*`", "", text)

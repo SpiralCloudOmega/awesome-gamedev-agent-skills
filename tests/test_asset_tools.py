@@ -9,7 +9,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+try:  # Pillow is only needed by the bundled asset helpers, not the validator.
+    from PIL import Image, ImageDraw
+
+    PILLOW_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - exercised on machines without Pillow
+    Image = ImageDraw = None
+    PILLOW_AVAILABLE = False
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +23,11 @@ REPORT = ROOT / "skills" / "disciplines" / "create-game-assets" / "scripts" / "a
 PREVIEW = ROOT / "skills" / "disciplines" / "create-game-assets" / "scripts" / "build_preview_sheet.py"
 
 
+@unittest.skipUnless(
+    PILLOW_AVAILABLE,
+    "Pillow is not installed; run "
+    "pip install -r skills/disciplines/create-game-assets/scripts/requirements.txt",
+)
 class AssetToolTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
