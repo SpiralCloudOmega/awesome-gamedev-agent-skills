@@ -7,7 +7,7 @@ a real folder at `skills/<category>/<name>/SKILL.md`. Trigger words (`says:`) an
 
 ## Engine skills
 
-### Godot (`skills/godot/`, target Godot 4.x) — read after `project.godot` is detected
+### Godot (`skills/godot/`, target Godot 4.7) — read after `project.godot` is detected
 
 | Skill | Pick it when the request says / file signal |
 |-------|---------------------------------------------|
@@ -27,7 +27,7 @@ a real folder at `skills/<category>/<name>/SKILL.md`. Trigger words (`says:`) an
 | `godot-export` | "export Godot", "build for web/windows", `export_presets.cfg` |
 | `godot-csharp` | "Godot C#", "GodotSharp", "C# signals in Godot"; `*.cs` + `*.csproj` in a Godot project |
 
-### Unity (`skills/unity/`, target Unity 6 / 6000.0 LTS)
+### Unity (`skills/unity/`, target Unity 6.3 LTS / 6000.3)
 
 | Skill | Pick it when |
 |-------|--------------|
@@ -40,7 +40,7 @@ a real folder at `skills/<category>/<name>/SKILL.md`. Trigger words (`says:`) an
 | `unity-navmesh` | `NavMesh`, `NavMeshAgent`, "pathfinding in Unity" |
 | `unity-build-pipeline` | "build Unity", "player settings", "IL2CPP", "Addressables" |
 
-### Unreal (`skills/unreal/`, target UE 5.4+)
+### Unreal (`skills/unreal/`, target UE 5.8)
 
 | Skill | Pick it when |
 |-------|--------------|
@@ -76,6 +76,7 @@ a real folder at `skills/<category>/<name>/SKILL.md`. Trigger words (`says:`) an
 
 | Concept skill | `says:` triggers | Pairs with (engine API skill) |
 |---------------|------------------|-------------------------------|
+| `create-game-assets` | art direction, game assets, sprite/sprite sheet, tileset, texture, icon, concept art, 3D prop, consistent style | engine importer/rendering skill; installed `imagegen` for raster generation when available |
 | `game-ai` | enemy AI, behavior tree, state machine, steering, pathfinding | `unity-navmesh` / `unreal-behavior-trees` / Godot nav (`godot-nodes-scenes` + `godot-physics`) |
 | `procedural-gen` | procedural generation, perlin/simplex noise, random seed, dungeon generator | engine tilemap/grid: `godot-tilemap` / `unity-tilemap-2d` / `godot-3d-essentials` |
 | `dialogue-systems` | dialogue system, branching dialogue, Yarn Spinner, Ink, conversation tree; `*.yarn`/`*.ink` | engine UI: `godot-ui-control` / Unity UI |
