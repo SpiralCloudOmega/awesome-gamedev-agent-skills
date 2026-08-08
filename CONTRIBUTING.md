@@ -6,13 +6,16 @@ authoring standard in [`docs/SKILL-FORMAT.md`](docs/SKILL-FORMAT.md) before open
 
 ## What a skill is
 
-A skill is a directory containing a `SKILL.md` file (and optionally a `references/`
-folder for depth). It lives under the matching category in `skills/`:
+A skill is a directory containing a `SKILL.md` file, with optional resources that
+support the workflow. It lives under the matching category in `skills/`:
 
 ```
 skills/<category>/<skill-name>/
 ├── SKILL.md
-└── references/        # optional, for deeper material
+├── agents/openai.yaml # optional Codex UI metadata
+├── references/        # optional deeper material
+├── scripts/           # optional deterministic helpers
+└── assets/            # optional templates and starter files
 ```
 
 The directory name **must equal** the skill's `name` frontmatter field.
@@ -31,7 +34,8 @@ examples target, and verify code is correct and idiomatic — do not invent APIs
 A skill is ready to merge when all of the following are true:
 
 - [ ] **Frontmatter valid.** `name` is ≤64 chars, lowercase letters/digits/hyphens only,
-      no leading/trailing hyphen, and equals the folder name.
+      no leading/trailing hyphen, and equals the folder name; `name` and `description`
+      are the only committed frontmatter fields.
 - [ ] **Description is a trigger.** `description` is non-empty, ≤1024 chars, and states
       both *what the skill does* and *when to use it*.
 - [ ] **Lean body.** `SKILL.md` is under ~500 lines; deeper material is pushed into
@@ -42,14 +46,16 @@ A skill is ready to merge when all of the following are true:
       engine/runtime version. No invented APIs.
 - [ ] **Original.** No copied text or code; written from primary docs.
 - [ ] **Links resolve.** Any `references/` links in the skill point at real files.
+- [ ] **Resources verified.** Scripts have `--help`, fail safely, and were exercised;
+      templates/JSON parse; any `agents/openai.yaml` names the skill in its default prompt.
 - [ ] **Validator passes** (see below).
 - [ ] **No growth/marketing language** anywhere in committed files.
 
 ## Validator
 
 Run the validator before pushing. It checks every `skills/**/SKILL.md` and
-`router/SKILL.md` for frontmatter limits, `name`==folder, file length, and that internal
-`references/` links resolve:
+`router/SKILL.md` for the authoring contract. It also checks bundled resource links,
+OpenAI UI metadata, JSON assets, router coverage, catalog counts, and plugin manifests:
 
 ```bash
 python scripts/validate-skills.py
@@ -81,6 +87,9 @@ PR:
    instead of re-teaching primitives.
 4. **Re-validate.** Run the validator (it checks `router/SKILL.md` too) and confirm a sample
    prompt routes to the new skill.
+5. **Wire distribution.** Add the skill to the complete and category bundles in
+   [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json), then update the README
+   catalog/count. The validator checks these connections.
 
 Keep the router lean: it dispatches by `name` + `description`, so a precise description (see
 [`docs/SKILL-FORMAT.md`](docs/SKILL-FORMAT.md) §3) does most of the routing work.

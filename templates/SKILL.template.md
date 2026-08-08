@@ -1,39 +1,49 @@
 ---
-name: REPLACE-with-folder-name
+name: replace-with-skill-name
 description: >
-  REPLACE. One or two sentences: what this skill does, then "Use when ..." with the
-  concrete words a user would type (engine names, class/node names, genre, file types).
-  Max 1024 characters. Third person. No marketing language.
-license: Apache-2.0
-compatibility: REPLACE (e.g., "Godot 4.3+", "Unity 6", "Unreal 5.4")
-metadata:
-  engine: REPLACE        # godot | unity | unreal | phaser | bevy | ... | none
-  category: REPLACE      # godot | unity | unreal | web-engines | other-engines | disciplines | genres | workflows
-  difficulty: REPLACE    # beginner | intermediate | advanced
+  State the concrete outcome this skill delivers. Use when the request mentions
+  specific tasks, files, APIs, symptoms, or goals that should activate it.
 ---
 
-# REPLACE — Title
+# Replace with skill title
 
-Short purpose line. Read the authoring standard at `docs/SKILL-FORMAT.md` before writing.
+Deliver the outcome in one sentence. State the baseline version for new projects and preserve an
+existing project's pinned version unless migration is requested.
 
 ## When to use
-- Use when ...
-- Do NOT use for ... (point to the sibling skill that handles it)
 
-## Core workflow
-1. ...
-2. ...
-3. ...
+- Use when …
+- Use when …
+
+**When not to use:** hand off nearby work to `$related-skill` or the relevant engine skill.
+
+## Workflow
+
+1. **Inspect.** Read the project manifest, relevant files, existing conventions, and constraints.
+2. **Choose.** Select the smallest compatible approach and state any consequential assumption.
+3. **Implement.** Make the focused change using the project's current version and patterns.
+4. **Verify.** Run the smallest meaningful check and inspect the real output.
+5. **Handoff.** Report changed files, evidence, caveats, and the next useful action.
 
 ## Patterns
-<!-- 2-5 short, correct, version-pinned snippets. One point each. -->
+
+### Focused pattern
+
 ```text
-REPLACE with idiomatic, verified code.
+Use a compact, verified example. Do not invent APIs.
 ```
 
 ## Pitfalls
-- ...
 
-## References
-<!-- Push depth here so this file stays < 500 lines. -->
-- For ___, read `references/___.md`.
+- **Visible symptom** → likely cause; concrete fix and verification.
+- **Version mismatch** → inspect the installed version and use its matching docs or migration guide.
+
+## Resources
+
+- Read `references/example.md` only when deeper detail is needed.
+- Run `scripts/example.py --help` before using the optional helper.
+- Copy `assets/example.ext` only when the task needs the starter asset.
+
+## Related skills
+
+- `$related-skill` — the adjacent responsibility it owns.

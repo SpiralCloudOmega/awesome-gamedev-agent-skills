@@ -27,7 +27,7 @@ The [`skills` CLI](https://www.npmjs.com/package/skills) is the package manager 
 Skills ecosystem. It auto-detects your agent(s) and writes skills to each one's directory:
 
 ```bash
-# install the router + all 66 skills into whatever agent(s) you have
+# install the router + all 67 skills into whatever agent(s) you have
 npx skills add gamedev-skills/awesome-gamedev-agent-skills
 
 # preview without installing
@@ -37,9 +37,10 @@ npx skills add gamedev-skills/awesome-gamedev-agent-skills --list
 npx skills add gamedev-skills/awesome-gamedev-agent-skills -a cursor -g
 ```
 
-This repo ships a `.claude-plugin/marketplace.json`, which the CLI also reads, so the master
-[`router/`](../router) skill is discovered alongside the catalog under `skills/`. Claude Code users
-can alternatively use the native plugin commands (see [`INSTALLATION.md`](INSTALLATION.md)).
+This repo ships a Claude marketplace manifest. The master [`router/`](../router) skill is
+discovered alongside the catalog under `skills/`. Claude Code users can alternatively use the
+native plugin commands (see [`INSTALLATION.md`](INSTALLATION.md)); Codex is supported through the
+standard `.agents/skills/` layout and universal installer.
 
 ## Where each agent looks for skills
 
@@ -73,36 +74,24 @@ automatically, so you rarely need to track these by hand.
 > **Cline note.** Skills are an experimental feature — enable them under
 > **Settings → Features → Enable Skills** before they appear.
 
-## The only real "compatibility" wrinkle: optional fields
+## Compatibility boundary
 
-A **basic skill** — `name`, `description`, a Markdown body, and optional `scripts/`/`references/`/
-`assets/` — works in every skills-compatible agent. The differences between agents live entirely in
-a few **optional, advanced** frontmatter fields:
-
-| Optional field | Honored by | Notes |
-|----------------|-----------|-------|
-| `allowed-tools` | most agents (e.g. Claude Code, Codex, Cursor, Cline) | **not** honored by Kiro; ignored where unsupported |
-| `hooks` | Claude Code, Cline, Kiro | per-agent lifecycle hooks |
-| `context: fork` | Claude Code only | runs the skill in a forked context |
-
-Because these are optional, an agent that doesn't support one simply ignores it — it does not break
-the skill. **Every committed skill in this repo deliberately uses only the portable core** (below),
-so the same file is valid and useful in every agent, and the validator (`scripts/validate-skills.py`)
-keeps it that way.
+A basic skill—`name`, `description`, a Markdown body, and optional `scripts/`, `references/`, and
+`assets/`—is the shared contract. Clients may expose extra behavior, but extension keys and plugin
+metadata are not assumed to be portable. Every committed `SKILL.md` therefore uses only the two
+required frontmatter fields. Agent presentation lives beside the skill, such as
+`agents/openai.yaml`, and distribution metadata lives at repository root.
 
 ## What's in a committed `SKILL.md` (the portable core)
 
-- **Frontmatter:** `name` (1–64 chars; lowercase, digits, hyphens; equals the folder name) and
-  `description` (≤1024 chars; says *what it does* **and** *when to use it*). Optionally `license`,
-  `compatibility`, and a flat `metadata` map (we use `engine` / `category` / `difficulty`).
+- **Frontmatter:** exactly `name` (1–64 chars; lowercase, digits, hyphens; equals the folder name)
+  and `description` (≤1024 chars; says *what it does* **and** *when to use it*).
 - **Body:** the open-standard playbook — when-to-use, workflow, patterns, pitfalls, references —
   kept under ~500 lines, with depth pushed into `references/`.
 
-The validator rejects agent-specific frontmatter keys (`allowed-tools`, `paths`,
-`disable-model-invocation`, `globs`, `alwaysApply`, `trigger`, `hooks`, `model`, …). Some agents
-(e.g. Cursor) accept several of these, but keeping them out of the source is what lets one file run
-unchanged in all of them; an agent-specific field is set at install time, never baked into the
-shared skill.
+The validator rejects extra frontmatter in this catalog and checks bundled OpenAI metadata
+separately. This keeps the source unambiguous while recognizing that the open specification defines
+optional fields other repositories may choose to use.
 
 ## Verify after installing
 
@@ -119,7 +108,7 @@ adoption above is what turns "write it once" into "runs everywhere."
 
 ---
 
-*Sources (checked 2026-06-26): the Agent Skills [specification](https://agentskills.io/specification)
+*Sources (checked 2026-08-08): the Agent Skills [specification](https://agentskills.io/specification)
 and [client list](https://agentskills.io/clients); the [`skills` CLI](https://www.npmjs.com/package/skills);
 and the official skills docs for [Cursor](https://cursor.com/docs/skills),
 [Cline](https://docs.cline.bot/customization/skills), [Codex](https://developers.openai.com/codex/skills),

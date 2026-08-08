@@ -4,26 +4,29 @@
 
 <p align="center">
   <img src="docs/assets/banner.png" width="820"
-       alt="awesome-gamedev-agent-skills — game-dev skills for your AI coding agent. Build any game, in any engine. 66 skills and a router across 10 engines, installed with one command. Sample game screenshots: a cozy farming sim, a metroidvania, a low-poly 3D island, an atmospheric platformer, and a top-down dungeon crawler.">
+       alt="awesome-gamedev-agent-skills — game-dev skills for AI coding agents. 67 skills and a router across 10 engines, including an art-direction and asset-production workflow.">
 </p>
 
 **Game-development expertise for AI coding agents — install once, and a router loads the
 right skill for whatever you're building.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-66%20%2B%20router-brightgreen)](skills/)
+[![Skills](https://img.shields.io/badge/skills-67%20%2B%20router-brightgreen)](skills/)
 [![Format](https://img.shields.io/badge/format-Agent%20Skills-informational)](docs/SKILL-FORMAT.md)
 [![Last commit](https://img.shields.io/github/last-commit/gamedev-skills/awesome-gamedev-agent-skills)](https://github.com/gamedev-skills/awesome-gamedev-agent-skills/commits/main)
 
 [Agent Skills](docs/SKILL-FORMAT.md) are small capability files an AI agent loads only when it
-needs them. This repo gives your agent **66 game-dev skills** and a **router** that picks the
+needs them. This repo gives your agent **67 game-dev skills** and a **router** that picks the
 right ones for you. You describe what you're building; the agent loads the matching engine and
 task skills before it writes code.
 
 - **Cross-engine.** Godot, Unity, Unreal, Phaser, PixiJS, three.js, Bevy, pygame, LÖVE, Roblox.
 - **You don't pick skills.** The router detects your engine and task and loads only what fits.
+- **Art direction, not one-off generations.** The asset workflow locks a visual target, builds
+  families, normalizes outputs deterministically, and checks them inside the game.
 - **Built to trust.** Every skill is written from primary docs, version-pinned to a stated
-  engine release, and checked by a [validator](scripts/validate-skills.py). 
+  engine release, and checked by a [validator](scripts/validate-skills.py). Current baselines and
+  upgrade policy live in [version support](docs/VERSION-SUPPORT.md).
 
 ## Contents
 
@@ -37,7 +40,7 @@ task skills before it writes code.
 ## Quick start
 
 **One command, any agent.** The [`skills`](https://www.npmjs.com/package/skills) CLI detects the
-coding agent you already use and installs the router plus all 66 skills into the right place:
+coding agent you already use and installs the router plus all 67 skills into the right place:
 
 ```bash
 npx skills add gamedev-skills/awesome-gamedev-agent-skills
@@ -77,6 +80,7 @@ Describe the task in plain language. The router figures out the skills:
 | "add a double jump to my Godot player" | `godot-2d-movement` + `platformer` |
 | "make an inventory for my Unity RPG" | `unity-scriptableobjects` + `rpg` + `save-systems` |
 | "procedural dungeon roguelike in Godot" | `godot-tilemap` + `procedural-gen` + `roguelike` |
+| "make a cohesive pixel-art player, enemies, and tiles" | `create-game-assets` + the detected engine importer |
 | "how should I design save slots?" | `save-systems` |
 | "publish my game on itch with butler" | `itch-publish` |
 
@@ -108,11 +112,11 @@ engine), while disciplines, genres, and workflows are additive on top.
 
 ## Catalog
 
-66 skills across 8 categories — each links to its `SKILL.md` below.
+67 skills across 8 categories — each links to its `SKILL.md` below.
 
 ### Engines
 
-#### Godot — 15 ([`skills/godot/`](skills/godot/)) · Godot 4.x
+#### Godot — 15 ([`skills/godot/`](skills/godot/)) · Godot 4.7
 
 | Skill | Scope |
 |-------|-------|
@@ -132,7 +136,7 @@ engine), while disciplines, genres, and workflows are additive on top.
 | [`godot-export`](skills/godot/godot-export/SKILL.md) | Export presets/templates, platform builds, headless CLI export |
 | [`godot-csharp`](skills/godot/godot-csharp/SKILL.md) | C#/.NET in Godot: bindings, signals as events, GDScript interop |
 
-#### Unity — 8 ([`skills/unity/`](skills/unity/)) · Unity 6 (6000.0 LTS)
+#### Unity — 8 ([`skills/unity/`](skills/unity/)) · Unity 6.3 LTS (6000.3)
 
 | Skill | Scope |
 |-------|-------|
@@ -145,7 +149,7 @@ engine), while disciplines, genres, and workflows are additive on top.
 | [`unity-navmesh`](skills/unity/unity-navmesh/SKILL.md) | AI navigation: NavMesh bake, `NavMeshAgent` |
 | [`unity-build-pipeline`](skills/unity/unity-build-pipeline/SKILL.md) | Build/player/quality settings, code stripping, Addressables |
 
-#### Unreal — 6 ([`skills/unreal/`](skills/unreal/)) · Unreal Engine 5.4+
+#### Unreal — 6 ([`skills/unreal/`](skills/unreal/)) · Unreal Engine 5.8
 
 | Skill | Scope |
 |-------|-------|
@@ -156,11 +160,11 @@ engine), while disciplines, genres, and workflows are additive on top.
 | [`unreal-niagara`](skills/unreal/unreal-niagara/SKILL.md) | Niagara VFX: systems, emitters, modules, parameters |
 | [`unreal-packaging`](skills/unreal/unreal-packaging/SKILL.md) | Packaging/cooking projects, build configs, shipping builds |
 
-#### Web engines — 6 ([`skills/web-engines/`](skills/web-engines/)) · Phaser 3 · PixiJS v8 · three.js r165+
+#### Web engines — 6 ([`skills/web-engines/`](skills/web-engines/)) · Phaser 4.2 · PixiJS 8.19 · three.js r184
 
 | Skill | Scope |
 |-------|-------|
-| [`phaser-core`](skills/web-engines/phaser-core/SKILL.md) | Phaser 3 game config, Scene lifecycle, loader, cameras |
+| [`phaser-core`](skills/web-engines/phaser-core/SKILL.md) | Phaser 4.2 game config, Scene lifecycle, loader, cameras |
 | [`phaser-arcade-physics`](skills/web-engines/phaser-arcade-physics/SKILL.md) | Arcade Physics: bodies, velocity, colliders/overlap, groups |
 | [`pixijs-rendering`](skills/web-engines/pixijs-rendering/SKILL.md) | PixiJS v8 scene graph: `Application`, `Container`, `Sprite`, events |
 | [`threejs-scene-setup`](skills/web-engines/threejs-scene-setup/SKILL.md) | Three.js scene/camera/renderer/animation-loop, resizing, controls |
@@ -171,18 +175,19 @@ engine), while disciplines, genres, and workflows are additive on top.
 
 | Skill | Scope |
 |-------|-------|
-| [`bevy-ecs`](skills/other-engines/bevy-ecs/SKILL.md) | Bevy app + ECS: components, systems, queries, resources, plugins (Bevy 0.16+) |
-| [`pygame-core`](skills/other-engines/pygame-core/SKILL.md) | pygame loop, `Surface`/`Rect`, sprites/groups, events (pygame 2.6) |
+| [`bevy-ecs`](skills/other-engines/bevy-ecs/SKILL.md) | Bevy app + ECS: components, systems, queries, resources, plugins (Bevy 0.19) |
+| [`pygame-core`](skills/other-engines/pygame-core/SKILL.md) | pygame loop, `Surface`/`Rect`, sprites/groups, events (pygame-ce 2.5.7) |
 | [`love2d-core`](skills/other-engines/love2d-core/SKILL.md) | LÖVE `load/update/draw` loop, dt-driven motion, input, states (LÖVE 11.5) |
 | [`roblox-luau`](skills/other-engines/roblox-luau/SKILL.md) | Roblox Luau scripting: services, instances, client/server model |
 | [`roblox-datastores`](skills/other-engines/roblox-datastores/SKILL.md) | Persistent data with `DataStoreService`: sessions, limits, ordered stores |
 
-### Disciplines — 13 ([`skills/disciplines/`](skills/disciplines/))
+### Disciplines — 14 ([`skills/disciplines/`](skills/disciplines/))
 
 Cross-engine concepts that load alongside the detected engine skill.
 
 | Skill | Scope |
 |-------|-------|
+| [`create-game-assets`](skills/disciplines/create-game-assets/SKILL.md) | Art direction and production pipeline for cohesive sprites, tiles, textures, icons, UI art, and 3D assets |
 | [`game-ai`](skills/disciplines/game-ai/SKILL.md) | NPC decision-making: FSMs, behavior trees, steering, pathfinding |
 | [`procedural-gen`](skills/disciplines/procedural-gen/SKILL.md) | Noise, RNG, seeds, grid/dungeon/terrain generation |
 | [`dialogue-systems`](skills/disciplines/dialogue-systems/SKILL.md) | Branching dialogue/narrative: nodes, conditions, variables (Yarn/Ink) |
@@ -263,7 +268,7 @@ Here's the shape of a single exchange (illustrative):
 > add a double jump to my player
 
 Detected Godot (project.godot). Loading godot-2d-movement for the controller
-and platformer for jump feel — skipping the other 64 skills.
+and platformer for jump feel — skipping the other 65 skills.
 ```
 
 ```gdscript
@@ -277,7 +282,7 @@ var _jumps_left := max_jumps
 
 func _physics_process(delta: float) -> void:
     if not is_on_floor():
-        velocity += get_gravity() * delta   # get_gravity() is Godot 4.3+
+        velocity += get_gravity() * delta   # Godot 4.7 baseline
     else:
         _jumps_left = max_jumps
 
@@ -292,7 +297,7 @@ func _physics_process(delta: float) -> void:
 ## Repository layout
 
 ```
-skills/        66 specialized skills, grouped by engine / discipline / genre / workflow
+skills/        67 specialized skills, grouped by engine / discipline / genre / workflow
 router/        the master router skill (+ references/)
 docs/          authoring standard, installation, compatibility
 templates/     SKILL.md template
@@ -312,4 +317,3 @@ python scripts/validate-skills.py
 ## License
 
 [Apache-2.0](LICENSE). See [`NOTICE`](NOTICE) for attribution and trademark notes.
-

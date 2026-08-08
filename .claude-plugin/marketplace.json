@@ -8,7 +8,8 @@
     {
       "name": "gamedev",
       "source": "./",
-      "description": "Everything: the master router plus all 66 game-dev skills across every engine, discipline, genre, and workflow.",
+      "description": "Everything: the master router plus all 67 game-dev skills across every engine, discipline, genre, and workflow.",
+      "strict": false,
       "skills": [
         "./router",
         "./skills/godot/godot-gdscript",
@@ -51,6 +52,7 @@
         "./skills/other-engines/love2d-core",
         "./skills/other-engines/roblox-luau",
         "./skills/other-engines/roblox-datastores",
+        "./skills/disciplines/create-game-assets",
         "./skills/disciplines/game-ai",
         "./skills/disciplines/procedural-gen",
         "./skills/disciplines/dialogue-systems",
@@ -82,6 +84,7 @@
     {
       "name": "router",
       "source": "./",
+      "strict": false,
       "description": "Master router that detects the engine + task and loads the right skill(s).",
       "skills": [
         "./router"
@@ -90,7 +93,8 @@
     {
       "name": "godot",
       "source": "./",
-      "description": "Godot 4.x engine skills (GDScript, nodes, physics, shaders, export, C#).",
+      "strict": false,
+      "description": "Godot 4.7 engine skills (GDScript, nodes, physics, shaders, export, C#).",
       "skills": [
         "./skills/godot/godot-gdscript",
         "./skills/godot/godot-nodes-scenes",
@@ -112,7 +116,8 @@
     {
       "name": "unity",
       "source": "./",
-      "description": "Unity 6 (6000.0 LTS) engine skills (C#, input, physics, animation, build).",
+      "strict": false,
+      "description": "Unity 6.3 LTS engine skills (C#, input, physics, animation, build).",
       "skills": [
         "./skills/unity/unity-csharp-scripting",
         "./skills/unity/unity-input-system",
@@ -127,7 +132,8 @@
     {
       "name": "unreal",
       "source": "./",
-      "description": "Unreal Engine 5.4+ skills (Blueprints, C++ gameplay, input, AI, Niagara, packaging).",
+      "strict": false,
+      "description": "Unreal Engine 5.8 skills (Blueprints, C++ gameplay, input, AI, Niagara, packaging).",
       "skills": [
         "./skills/unreal/unreal-blueprints",
         "./skills/unreal/unreal-cpp-gameplay",
@@ -140,7 +146,8 @@
     {
       "name": "web-engines",
       "source": "./",
-      "description": "Web game frameworks: Phaser 3, PixiJS v8, three.js.",
+      "strict": false,
+      "description": "Web game frameworks: Phaser 4.2, PixiJS 8.19, three.js r184.",
       "skills": [
         "./skills/web-engines/phaser-core",
         "./skills/web-engines/phaser-arcade-physics",
@@ -153,6 +160,7 @@
     {
       "name": "other-engines",
       "source": "./",
+      "strict": false,
       "description": "Bevy, pygame, LÖVE, and Roblox engine skills.",
       "skills": [
         "./skills/other-engines/bevy-ecs",
@@ -165,8 +173,10 @@
     {
       "name": "disciplines",
       "source": "./",
-      "description": "Cross-engine concepts: AI, procedural gen, dialogue, saves, audio, shaders, physics, level design, input.",
+      "strict": false,
+      "description": "Cross-engine concepts: visual assets, AI, procedural gen, dialogue, saves, audio, shaders, physics, level design, and input.",
       "skills": [
+        "./skills/disciplines/create-game-assets",
         "./skills/disciplines/game-ai",
         "./skills/disciplines/procedural-gen",
         "./skills/disciplines/dialogue-systems",
@@ -185,6 +195,7 @@
     {
       "name": "genres",
       "source": "./",
+      "strict": false,
       "description": "Compositional genre templates: platformer, roguelike, RPG, FPS, tower defense, card, visual novel, survival, puzzle.",
       "skills": [
         "./skills/genres/platformer",
@@ -201,6 +212,7 @@
     {
       "name": "workflows",
       "source": "./",
+      "strict": false,
       "description": "Process and shipping skills: game jam, fast prototyping, Steam, itch.io.",
       "skills": [
         "./skills/workflows/game-jam",

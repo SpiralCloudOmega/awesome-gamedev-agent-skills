@@ -19,6 +19,24 @@ Scan for the highest-confidence signal and stop at the first match in this prece
 | 9 | pygame | `*.py` with `import pygame` | `pygame.init()`, `pygame.display.set_mode` | `skills/other-engines/pygame-core/` |
 | 10 | Roblox | `*.rbxl` / `*.rbxlx`, or `*.project.json` (Rojo) | `*.luau`, `DataStoreService`, `game:GetService` | `skills/other-engines/roblox-luau`, `roblox-datastores` |
 
+## Detect the installed version
+
+Engine identity is not enough. Read the version source before using version-sensitive APIs:
+
+| Stack | Version source |
+|-------|----------------|
+| Godot | feature tags in `project.godot`, then the project's documented toolchain or `godot --version` when available |
+| Unity | `ProjectSettings/ProjectVersion.txt` plus package versions in `Packages/manifest.json` / `packages-lock.json` |
+| Unreal | `EngineAssociation` in `*.uproject`, project documentation, or the selected installed engine |
+| Phaser / PixiJS / three.js | `package.json` **and the resolved lockfile**, not a tutorial's version |
+| Bevy | `Cargo.toml` and the resolved `Cargo.lock` entry |
+| pygame-ce | `pyproject.toml`, requirements/lock files, then the active environment |
+| LÖVE | `conf.lua` version when declared, then the installed runtime |
+| Roblox | platform APIs are rolling; inspect current Creator Hub documentation for unstable APIs |
+
+For a new project use the baseline in `../../docs/VERSION-SUPPORT.md`. For an existing project,
+preserve the detected version unless the user explicitly requests migration.
+
 ## Disambiguation rules (must-handle ambiguities)
 
 - **Godot C# vs Unity vs Bevy** — all may contain a `.csproj` or `Cargo.toml`. The presence of
