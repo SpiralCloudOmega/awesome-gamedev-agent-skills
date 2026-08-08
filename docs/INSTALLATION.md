@@ -30,7 +30,7 @@ is the dispatcher). Copy it in alongside the others so the agent can route reque
 
 The [`skills` CLI](https://www.npmjs.com/package/skills) is the package manager for the Agent
 Skills ecosystem. It detects the agents installed on your machine and copies the skills (the
-router plus all 66) into each one's skills directory — no clone required:
+router plus all 67) into each one's skills directory — no clone required:
 
 ```bash
 # install into whatever agent(s) you have
@@ -42,7 +42,7 @@ npx skills add gamedev-skills/awesome-gamedev-agent-skills --list
 # target one agent · install globally for all projects · grab a subset
 npx skills add gamedev-skills/awesome-gamedev-agent-skills -a cursor
 npx skills add gamedev-skills/awesome-gamedev-agent-skills -g
-npx skills add gamedev-skills/awesome-gamedev-agent-skills -s godot-tilemap -s platformer
+npx skills add gamedev-skills/awesome-gamedev-agent-skills --skill godot-tilemap --skill platformer
 ```
 
 Companions: `npx skills list` (what's installed), `npx skills update` (pull latest), and
@@ -59,7 +59,7 @@ so you can install it without cloning or copying files. Add the marketplace once
 claude plugin marketplace add gamedev-skills/awesome-gamedev-agent-skills
 ```
 
-Easiest — install the router and all 66 skills in one command:
+Easiest — install the router and all 67 skills in one command:
 
 ```bash
 claude plugin install gamedev@awesome-gamedev-agent-skills
@@ -155,7 +155,7 @@ options = ClaudeAgentOptions(
    `SKILL.md` sits inside it.
 3. Customize → Skills → **Upload**.
 
-Keep `description` ≤ 200 characters so it is not truncated by the upload UI.
+Upload the complete skill folder so bundled references, scripts, and assets remain available.
 
 ## Cursor / Windsurf / Cline (native skills)
 

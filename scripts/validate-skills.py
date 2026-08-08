@@ -1,266 +1,360 @@
 #!/usr/bin/env python3
-"""Validator for awesome-gamedev-agent-skills.
+"""Validate skills, resources, routing, catalogs, and plugin manifests.
 
-Checks every ``skills/**/SKILL.md`` and ``router/SKILL.md`` against the authoring
-standard in ``docs/SKILL-FORMAT.md``:
-
-* valid YAML frontmatter delimited by ``---`` lines;
-* ``name`` present, <=64 chars, lowercase ``a-z``/``0-9``/hyphens, no leading or
-  trailing hyphen, equal to the containing folder name, and unique repo-wide;
-* ``description`` present, non-empty, <=1024 chars;
-* portable frontmatter (no reserved names, XML tags, or agent-specific keys);
-* optional ``compatibility`` is non-empty and <=500 chars;
-* the file is shorter than 500 lines;
-* every internal ``references/`` link in the body resolves to a real file.
-
-It also warns when ``description`` exceeds the 200-character claude.ai soft
-limit or the experimental ``allowed-tools`` field is present.
-
-Exits 0 when everything passes, 1 when any skill fails. No third-party deps.
-
-Usage:
-    python scripts/validate-skills.py
+The script intentionally uses only the Python standard library so the same check
+runs locally and in CI.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
 
+
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MD_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+CODE_PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s]+)`")
+HTML_SRC_RE = re.compile(r"\bsrc=[\"']([^\"']+)[\"']")
+YAML_VALUE_RE = re.compile(r'^\s{2}([a-z_]+):\s*["\'](.*)["\']\s*$')
+
 MAX_NAME = 64
 MAX_DESCRIPTION = 1024
-SOFT_MAX_DESCRIPTION = 200
-MAX_COMPATIBILITY = 500
 MAX_LINES = 500
-
-RESERVED_NAME_WORDS = ("anthropic", "claude")
-FORBIDDEN_KEYS = frozenset(
-    {
-        "when_to_use",
-        "argument-hint",
-        "disable-model-invocation",
-        "user-invocable",
-        "model",
-        "paths",
-        "hooks",
-        "shell",
-        "context",
-        "globs",
-        "alwaysApply",
-        "trigger",
-    }
-)
-# A negative lookbehind avoids treating attached generic syntax such as
-# ``GetNode<T>`` as an XML tag while still rejecting standalone tags.
-XML_TAG_RE = re.compile(r"(?<![\w.])</?[A-Za-z][A-Za-z0-9.-]*(?:\s[^<>]*)?/?>")
-
+ALLOWED_FRONTMATTER = frozenset({"name", "description"})
+ALLOWED_SKILL_ENTRIES = frozenset({"SKILL.md", "agents", "assets", "references", "scripts"})
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Markdown links: [text](target)  and  inline-code paths: `references/foo.md`
-MD_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
-CODE_PATH_RE = re.compile(r"`([^`]*references/[^`]+?\.md)`")
+# Directories the repository-wide Markdown walk must never enter: version-control
+# internals, vendored packages, build output, and the paths .gitignore keeps local.
+# Without this the link check reports failures for third-party README files that
+# are not part of the project, and only passes on a clean checkout.
+EXCLUDED_DIRS = frozenset(
+    {
+        ".git",
+        ".kiro",
+        ".cache",
+        ".tmp",
+        ".venv",
+        "venv",
+        "__pycache__",
+        "_site",
+        "node_modules",
+        "site-packages",
+        "dist",
+        "build",
+        "scratch",
+        "plan",
+        "progress",
+    }
+)
 
 
 def find_skill_files() -> list[Path]:
-    files: list[Path] = []
-    skills_dir = REPO_ROOT / "skills"
-    if skills_dir.is_dir():
-        files.extend(sorted(skills_dir.rglob("SKILL.md")))
+    files = sorted((REPO_ROOT / "skills").rglob("SKILL.md"))
     router = REPO_ROOT / "router" / "SKILL.md"
     if router.is_file():
         files.append(router)
     return files
 
 
-def split_frontmatter(text: str) -> tuple[dict, int] | tuple[None, int]:
-    """Return (frontmatter_dict, body_start_line) or (None, 0) if missing/malformed.
-
-    Minimal YAML: supports ``key: value`` and a folded/literal block scalar
-    (``key: >`` or ``key: |``) whose value is the following more-indented lines.
-    Sufficient for the ``name`` and ``description`` fields we validate.
-    """
+def split_frontmatter(text: str) -> tuple[dict[str, str] | None, int]:
+    """Parse the flat fields and folded scalars used by this repository."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return None, 0
 
-    end = None
-    for i in range(1, len(lines)):
-        if lines[i].strip() == "---":
-            end = i
-            break
+    end = next((i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), None)
     if end is None:
         return None, 0
 
-    fm: dict[str, str] = {}
+    fields: dict[str, str] = {}
+    key_re = re.compile(r"^([A-Za-z0-9_-]+):\s*(.*)$")
     i = 1
-    key_line_re = re.compile(r"^([A-Za-z0-9_-]+):\s*(.*)$")
     while i < end:
         raw = lines[i]
-        if not raw.strip() or raw.lstrip().startswith("#"):
+        if not raw.strip() or raw.lstrip().startswith("#") or raw[:1] in (" ", "\t"):
             i += 1
             continue
-        # only treat top-level (non-indented) keys as fields
-        if raw[:1] in (" ", "\t"):
+        match = key_re.match(raw)
+        if not match:
             i += 1
             continue
-        m = key_line_re.match(raw)
-        if not m:
-            i += 1
-            continue
-        key, inline = m.group(1), m.group(2).strip()
-        if inline in (">", "|", ">-", "|-", ">+", "|+"):
-            # block scalar: collect following indented lines
+        key, inline = match.group(1), match.group(2).strip()
+        if key in fields:
+            fields[f"__duplicate__{key}"] = ""
+        if inline in {">", "|", ">-", "|-", ">+", "|+"}:
             block: list[str] = []
-            j = i + 1
-            while j < end:
-                bl = lines[j]
-                if bl.strip() == "":
-                    block.append("")
-                    j += 1
-                    continue
-                if bl[:1] in (" ", "\t"):
-                    block.append(bl.strip())
-                    j += 1
-                else:
-                    break
-            fm[key] = " ".join(p for p in block if p != "").strip()
-            i = j
-        else:
-            fm[key] = inline.strip().strip('"').strip("'")
             i += 1
-    return fm, end + 1
+            while i < end and (not lines[i].strip() or lines[i][:1] in (" ", "\t")):
+                if lines[i].strip():
+                    block.append(lines[i].strip())
+                i += 1
+            fields[key] = " ".join(block).strip()
+            continue
+        fields[key] = inline.strip('"\'')
+        i += 1
+    return fields, end + 1
+
+
+def _display(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _local_link_target(target: str) -> str | None:
+    link = target.strip().strip("<>").split("#", 1)[0].split("?", 1)[0]
+    if not link or link.startswith(("http://", "https://", "mailto:", "#")):
+        return None
+    # Ignore code that only happens to look like Markdown, such as [v](data).
+    if "/" not in link and not link.startswith(".") and Path(link).suffix == "":
+        return None
+    return link
+
+
+def validate_openai_yaml(skill_dir: Path, skill_name: str) -> list[str]:
+    path = skill_dir / "agents" / "openai.yaml"
+    if not path.exists():
+        return []
+    rel = _display(path)
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("interface:\n"):
+        return [f"{rel}: must start with 'interface:'"]
+
+    values = {match.group(1): match.group(2) for match in map(YAML_VALUE_RE.match, text.splitlines()) if match}
+    errors: list[str] = []
+    required = {"display_name", "short_description", "default_prompt"}
+    missing = sorted(required - values.keys())
+    if missing:
+        errors.append(f"missing interface field(s): {', '.join(missing)}")
+    short = values.get("short_description", "")
+    if short and not 25 <= len(short) <= 64:
+        errors.append(f"short_description is {len(short)} chars (must be 25–64)")
+    prompt = values.get("default_prompt", "")
+    if prompt and f"${skill_name}" not in prompt:
+        errors.append(f"default_prompt must mention ${skill_name}")
+    return [f"{rel}: {error}" for error in errors]
 
 
 def validate_file(path: Path) -> tuple[list[str], list[str]]:
     errors: list[str] = []
-    warnings: list[str] = []
-    rel = path.relative_to(REPO_ROOT).as_posix()
+    rel = _display(path)
     text = path.read_text(encoding="utf-8")
 
-    # line count
     line_count = len(text.splitlines())
     if line_count >= MAX_LINES:
         errors.append(f"file is {line_count} lines (must be < {MAX_LINES})")
 
-    fm, _ = split_frontmatter(text)
-    if fm is None:
-        errors.append("missing or malformed YAML frontmatter (need opening and closing '---')")
-        return [f"{rel}: {e}" for e in errors], []
+    fields, _ = split_frontmatter(text)
+    if fields is None:
+        return [f"{rel}: missing or malformed YAML frontmatter"], []
 
-    for key in sorted(FORBIDDEN_KEYS.intersection(fm)):
-        errors.append(f"forbidden frontmatter key: {key!r}")
-    if "allowed-tools" in fm:
-        warnings.append("experimental frontmatter key 'allowed-tools' reduces portability")
+    duplicates = sorted(key.removeprefix("__duplicate__") for key in fields if key.startswith("__duplicate__"))
+    for key in duplicates:
+        errors.append(f"duplicate frontmatter key: {key!r}")
+    actual_keys = {key for key in fields if not key.startswith("__duplicate__")}
+    extra = sorted(actual_keys - ALLOWED_FRONTMATTER)
+    missing = sorted(ALLOWED_FRONTMATTER - actual_keys)
+    if extra:
+        errors.append(f"non-portable frontmatter field(s): {', '.join(extra)}")
+    if missing:
+        errors.append(f"missing frontmatter field(s): {', '.join(missing)}")
 
-    # name
-    name = fm.get("name", "")
-    folder = path.parent.name
-    if not name:
-        errors.append("frontmatter 'name' is missing or empty")
-    else:
+    name = fields.get("name", "")
+    if name:
         if len(name) > MAX_NAME:
             errors.append(f"'name' is {len(name)} chars (max {MAX_NAME})")
-        if not NAME_RE.match(name):
-            errors.append(
-                f"'name' = {name!r} must be lowercase a-z/0-9/hyphens with no leading/trailing hyphen"
-            )
-        if any(word in name for word in RESERVED_NAME_WORDS):
-            errors.append(f"'name' = {name!r} contains a reserved word")
-        if XML_TAG_RE.search(name):
-            errors.append(f"'name' = {name!r} must not contain XML tags")
-        # router/SKILL.md lives in 'router'; skills live in their own folder
-        if name != folder:
-            errors.append(f"'name' = {name!r} must equal folder name {folder!r}")
+        if not NAME_RE.fullmatch(name):
+            errors.append("'name' must use lowercase letters, digits, and single hyphens")
+        if name != path.parent.name:
+            errors.append(f"'name' = {name!r} must equal folder name {path.parent.name!r}")
 
-    # description
-    desc = fm.get("description", "")
-    if not desc:
-        errors.append("frontmatter 'description' is missing or empty")
-    elif len(desc) > MAX_DESCRIPTION:
-        errors.append(f"'description' is {len(desc)} chars (max {MAX_DESCRIPTION})")
-    else:
-        if len(desc) > SOFT_MAX_DESCRIPTION:
-            warnings.append(
-                f"'description' is {len(desc)} chars (soft target {SOFT_MAX_DESCRIPTION})"
-            )
-        if XML_TAG_RE.search(desc):
-            errors.append("'description' must not contain XML tags")
+    description = fields.get("description", "")
+    if not description:
+        errors.append("'description' is missing or empty")
+    elif len(description) > MAX_DESCRIPTION:
+        errors.append(f"'description' is {len(description)} chars (max {MAX_DESCRIPTION})")
+    elif "<" in description or ">" in description:
+        errors.append("'description' must not contain angle brackets")
 
-    # optional compatibility
-    if "compatibility" in fm:
-        compatibility = fm["compatibility"]
-        if not compatibility:
-            errors.append("frontmatter 'compatibility' must not be empty when present")
-        elif len(compatibility) > MAX_COMPATIBILITY:
-            errors.append(
-                f"'compatibility' is {len(compatibility)} chars (max {MAX_COMPATIBILITY})"
-            )
+    unexpected = sorted(entry.name for entry in path.parent.iterdir() if entry.name not in ALLOWED_SKILL_ENTRIES)
+    if unexpected:
+        errors.append(f"unexpected skill-root entry/entries: {', '.join(unexpected)}")
 
-    # internal references/ links resolve
     targets = set(MD_LINK_RE.findall(text)) | set(CODE_PATH_RE.findall(text))
-    for target in targets:
-        link = target.strip()
-        # ignore external links and pure anchors
-        if link.startswith(("http://", "https://", "#", "mailto:")):
-            continue
-        link = link.split("#", 1)[0].split("?", 1)[0]
-        if not link:
-            continue
-        if "references/" not in link:
+    for target in sorted(targets):
+        link = _local_link_target(target)
+        if link is None:
             continue
         resolved = (path.parent / link).resolve()
         if not resolved.exists():
-            errors.append(f"reference link does not resolve: {target!r}")
+            errors.append(f"local resource link does not resolve: {target!r}")
 
-    return (
-        [f"{rel}: {e}" for e in errors],
-        [f"{rel}: {warning}" for warning in warnings],
-    )
+    errors.extend(error.removeprefix(f"{rel}: ") for error in validate_openai_yaml(path.parent, name))
+    return [f"{rel}: {error}" for error in errors], []
 
 
 def validate_unique_names(files: list[Path]) -> list[str]:
-    """Return errors for names used by more than one skill directory."""
     paths_by_name: dict[str, list[Path]] = {}
     for path in files:
-        fm, _ = split_frontmatter(path.read_text(encoding="utf-8"))
-        if fm is None or not fm.get("name"):
-            continue
-        paths_by_name.setdefault(fm["name"], []).append(path)
-
+        fields, _ = split_frontmatter(path.read_text(encoding="utf-8"))
+        if fields and fields.get("name"):
+            paths_by_name.setdefault(fields["name"], []).append(path)
     errors: list[str] = []
     for name, paths in sorted(paths_by_name.items()):
-        if len(paths) < 2:
+        if len(paths) > 1:
+            locations = ", ".join(_display(path) for path in paths)
+            errors.append(f"duplicate skill name {name!r}: {locations}")
+    return errors
+
+
+def validate_json_assets() -> list[str]:
+    errors: list[str] = []
+    for path in sorted((REPO_ROOT / "skills").rglob("assets/*.json")):
+        try:
+            json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"{_display(path)}: invalid JSON: {exc}")
+    return errors
+
+
+def _without_fenced_code(text: str) -> str:
+    kept: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        marker = "```" if stripped.startswith("```") else "~~~" if stripped.startswith("~~~") else None
+        if marker:
+            fence = None if fence == marker else marker if fence is None else fence
             continue
-        locations = ", ".join(path.relative_to(REPO_ROOT).as_posix() for path in paths)
-        errors.append(f"duplicate skill name {name!r}: {locations}")
+        if fence is None:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+def validate_markdown_links() -> list[str]:
+    """Check repository-local Markdown and HTML image targets outside code fences."""
+    errors: list[str] = []
+    for path in sorted(REPO_ROOT.rglob("*.md")):
+        if any(part in EXCLUDED_DIRS for part in path.parts):
+            continue
+        text = _without_fenced_code(path.read_text(encoding="utf-8"))
+        text = re.sub(r"`[^`]*`", "", text)
+        targets = set(MD_LINK_RE.findall(text)) | set(HTML_SRC_RE.findall(text))
+        for target in sorted(targets):
+            link = _local_link_target(target)
+            if link is None:
+                continue
+            resolved = (path.parent / link).resolve()
+            if not resolved.exists():
+                errors.append(f"{_display(path)}: local link does not resolve: {target!r}")
+    return errors
+
+
+def validate_marketplace(files: list[Path]) -> list[str]:
+    path = REPO_ROOT / ".claude-plugin" / "marketplace.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"{_display(path)}: cannot load manifest: {exc}"]
+
+    errors: list[str] = []
+    plugins = data.get("plugins")
+    if not isinstance(plugins, list):
+        return [f"{_display(path)}: 'plugins' must be a list"]
+
+    by_name: dict[str, set[str]] = {}
+    for plugin in plugins:
+        plugin_name = plugin.get("name", "<unnamed>")
+        if plugin.get("source") == "./" and plugin.get("strict") is not False:
+            errors.append(f"{_display(path)}: plugin {plugin_name!r} must set strict=false for explicit skill paths")
+        skill_paths = plugin.get("skills", [])
+        if len(skill_paths) != len(set(skill_paths)):
+            errors.append(f"{_display(path)}: plugin {plugin_name!r} contains duplicate skill paths")
+        by_name[plugin_name] = set(skill_paths)
+        for skill_path in skill_paths:
+            target = (REPO_ROOT / skill_path).resolve()
+            if not (target / "SKILL.md").is_file():
+                errors.append(f"{_display(path)}: plugin {plugin_name!r} points to missing skill {skill_path!r}")
+
+    expected_all = {f"./{path.parent.relative_to(REPO_ROOT).as_posix()}" for path in files}
+    if by_name.get("gamedev") != expected_all:
+        missing = sorted(expected_all - by_name.get("gamedev", set()))
+        extra = sorted(by_name.get("gamedev", set()) - expected_all)
+        errors.append(f"{_display(path)}: 'gamedev' bundle mismatch; missing={missing}, extra={extra}")
+
+    category_plugins = {
+        "godot": "godot",
+        "unity": "unity",
+        "unreal": "unreal",
+        "web-engines": "web-engines",
+        "other-engines": "other-engines",
+        "disciplines": "disciplines",
+        "genres": "genres",
+        "workflows": "workflows",
+    }
+    for plugin_name, category in category_plugins.items():
+        expected = {
+            f"./{skill.parent.relative_to(REPO_ROOT).as_posix()}"
+            for skill in files
+            if skill.parent.parent.name == category
+        }
+        if by_name.get(plugin_name) != expected:
+            errors.append(f"{_display(path)}: bundle {plugin_name!r} does not exactly match skills/{category}")
+    if by_name.get("router") != {"./router"}:
+        errors.append(f"{_display(path)}: 'router' bundle must contain only ./router")
+    return errors
+
+
+def validate_router_and_catalog(files: list[Path]) -> list[str]:
+    errors: list[str] = []
+    table_path = REPO_ROOT / "router" / "references" / "routing-table.md"
+    table = table_path.read_text(encoding="utf-8")
+    for path in files:
+        if path.parent.name == "router":
+            continue
+        name = path.parent.name
+        if f"`{name}`" not in table:
+            errors.append(f"{_display(table_path)}: missing routed skill `{name}`")
+
+    count = len(files) - 1
+    readme_path = REPO_ROOT / "README.md"
+    readme = readme_path.read_text(encoding="utf-8")
+    if f"{count} skills" not in readme:
+        errors.append(f"{_display(readme_path)}: catalog must state the current count ({count} skills)")
     return errors
 
 
 def main() -> int:
     files = find_skill_files()
     if not files:
-        print("No SKILL.md files found yet (skills/** and router/ are empty). OK.")
-        return 0
+        print("No SKILL.md files found.")
+        return 1
 
-    all_errors: list[str] = []
-    all_warnings: list[str] = []
+    errors: list[str] = []
+    warnings: list[str] = []
     for path in files:
-        errors, warnings = validate_file(path)
-        all_errors.extend(errors)
-        all_warnings.extend(warnings)
-    all_errors.extend(validate_unique_names(files))
+        file_errors, file_warnings = validate_file(path)
+        errors.extend(file_errors)
+        warnings.extend(file_warnings)
+    errors.extend(validate_unique_names(files))
+    errors.extend(validate_json_assets())
+    errors.extend(validate_markdown_links())
+    errors.extend(validate_marketplace(files))
+    errors.extend(validate_router_and_catalog(files))
 
-    print(f"Validated {len(files)} skill file(s).")
-    if all_warnings:
-        print(f"\nWARNINGS — {len(all_warnings)} portability warning(s):")
-        for warning in all_warnings:
+    print(f"Validated {len(files)} skill file(s) and repository wiring.")
+    if warnings:
+        print(f"\nWARNINGS — {len(warnings)}")
+        for warning in warnings:
             print(f"  - {warning}")
-    if all_errors:
-        print(f"\nFAILED — {len(all_errors)} problem(s):")
-        for e in all_errors:
-            print(f"  - {e}")
+    if errors:
+        print(f"\nFAILED — {len(errors)} problem(s):")
+        for error in errors:
+            print(f"  - {error}")
         return 1
     print("All checks passed.")
     return 0
