@@ -7,7 +7,7 @@
        alt="awesome-gamedev-agent-skills — game-dev skills for AI coding agents. 67 skills and a router across 10 engines, including an art-direction and asset-production workflow.">
 </p>
 
-**Game-development expertise for AI coding agents — install once, and a router loads the
+**67 game-dev skills for your AI coding agent — install once, and a router loads the
 right skill for whatever you're building.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -236,7 +236,8 @@ primitives.
 ## Agent compatibility
 
 Every skill here is a plain `SKILL.md` folder in the [Agent Skills](https://agentskills.io) open
-standard — metadata plus a Markdown playbook the agent reads on demand.
+standard — the format Anthropic launched as Claude Skills — metadata plus a Markdown playbook the
+agent reads on demand.
 
 The same file loads **natively** across the ecosystem: Claude Code, Claude, Cursor, Windsurf,
 Cline, OpenAI Codex, Gemini CLI, GitHub Copilot, Kiro, Antigravity, VS Code, and
