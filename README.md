@@ -321,6 +321,11 @@ rubric before merge:
 python scripts/validate-skills.py
 ```
 
+## Maintainer
+
+[awesome-gamedev-agent-skills](https://github.com/gamedev-skills/awesome-gamedev-agent-skills)
+was created and is maintained by [Abhishek Barali](https://github.com/AbhishekBarali).
+
 ## License
 
 [Apache-2.0](LICENSE). See [`NOTICE`](NOTICE) for attribution and trademark notes.
